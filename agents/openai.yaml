@@ -1,0 +1,4 @@
+interface:
+  display_name: "ChongPlus Image"
+  short_description: "Generate and edit images with ChongPlus."
+  default_prompt: "Use $chongplus-image to generate an image with ChongPlus."
