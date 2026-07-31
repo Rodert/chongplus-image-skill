@@ -22,16 +22,19 @@ Languages: [English](README.md) | [简体中文](docs/README.zh-CN.md) | [繁體
 
 This repository cannot make arbitrary chat clients execute local code or securely store credentials. In those clients, use the API directly instead.
 
-## Install in Codex
+## Install and use in Codex
 
-Ask Codex to install this repository, or run its Skill installer:
+Copy the following into Codex:
 
-```bash
-python3 /path/to/install-skill-from-github.py \
-  --repo Rodert/chongplus-image-skill --path .
+```text
+Install and use the ChongPlus Image Skill from https://github.com/Rodert/chongplus-image-skill
+
+On first use, proactively ask me for my ChongPlus API Key. Save it securely in the local user configuration, then read and reuse it automatically for later requests. Do not ask me to configure an environment variable.
+
+Follow the official ChongPlus Image Studio documentation: https://api.chongplus.plus/tools/image-studio/docs/
 ```
 
-The Skill is available in a new Codex turn after installation. Then ask: `Use ChongPlus to generate a cinematic mountain landscape.` On the first request, Codex asks for your API key and stores it locally. It does not require an environment variable.
+After installation, start a new Codex turn and ask it to generate or edit an image. The bundled client stores the key locally and reuses it for later ChongPlus image requests.
 
 Need an API Key? Sign in at [ChongPlus Keys](https://api.chongplus.plus/keys), create a key, and select the image-generation group.
 

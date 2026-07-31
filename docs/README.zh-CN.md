@@ -20,16 +20,21 @@
 
 普通聊天客户端无法自动安装 Skill、执行本地脚本或安全保存密钥，请直接使用 API。
 
-## 在 Codex 中安装
+## 在 Codex 中安装并使用
 
-让 Codex 安装此仓库，或运行其 Skill 安装器：
+将以下内容直接复制给 Codex：
 
-```bash
-python3 /path/to/install-skill-from-github.py \
-  --repo Rodert/chongplus-image-skill --path .
+```text
+请安装并使用 ChongPlus 生图 Skill：
+https://github.com/Rodert/chongplus-image-skill
+
+首次使用时请主动提示我输入 ChongPlus API Key，并自动安全保存到本机配置中，之后直接读取使用；不要要求我手动配置环境变量。
+
+使用文档：
+https://api.chongplus.plus/tools/image-studio/docs/
 ```
 
-安装后在新的 Codex 对话中说“使用 ChongPlus 生成一张日出山景”。首次使用时会请求 API Key 并保存到本机，不需要配置环境变量。
+安装后开启一个新的 Codex 对话，即可请求生成或编辑图片。随附客户端会将密钥保存到本机，并在后续 ChongPlus 生图请求中自动读取。
 
 还没有 API Key？请前往 [ChongPlus 密钥页面](https://api.chongplus.plus/keys) 登录、创建密钥，并选择“生图”分组。
 

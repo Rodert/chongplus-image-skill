@@ -20,16 +20,21 @@ ChongPlus Image API で画像生成と参照画像の編集を行う Agent Skill
 
 通常のチャットクライアントでは、Skill の自動インストール、ローカルコードの実行、安全なキー保存はできません。その場合は API を直接使用してください。
 
-## Codex へのインストール
+## Codex へのインストールと使用
 
-Codex にこのリポジトリをインストールするよう依頼するか、Skill インストーラーを実行します。
+次の内容を Codex にそのまま貼り付けてください。
 
-```bash
-python3 /path/to/install-skill-from-github.py \
-  --repo Rodert/chongplus-image-skill --path .
+```text
+ChongPlus Image Skill をインストールして使用してください:
+https://github.com/Rodert/chongplus-image-skill
+
+初回使用時には、ChongPlus API Key の入力を自発的に求めてください。キーはローカルのユーザー設定に安全に保存し、その後は直接読み込んで使用してください。環境変数を手動で設定するよう求めないでください。
+
+公式ドキュメント:
+https://api.chongplus.plus/tools/image-studio/docs/
 ```
 
-インストール後、新しい Codex の会話で「ChongPlus で日の出の山岳風景を生成して」と依頼してください。初回のみ API Key を尋ねてローカルに保存し、環境変数は不要です。
+インストール後、新しい Codex の会話で画像の生成または編集を依頼してください。付属クライアントはキーをローカルに保存し、以後の ChongPlus 画像リクエストで自動的に再利用します。
 
 API Key をお持ちでない場合は、[ChongPlus Keys](https://api.chongplus.plus/keys) にログインし、キーを作成して画像生成グループを選択してください。
 

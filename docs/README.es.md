@@ -20,16 +20,21 @@ Agent Skill para generar imagenes y editar imagenes de referencia mediante la AP
 
 Los clientes de chat normales no pueden instalar Skills, ejecutar codigo local ni guardar credenciales de forma segura. En ese caso, use la API directamente.
 
-## Instalar en Codex
+## Instalar y usar en Codex
 
-Pida a Codex que instale este repositorio o ejecute su instalador de Skills:
+Copie lo siguiente directamente en Codex:
 
-```bash
-python3 /path/to/install-skill-from-github.py \
-  --repo Rodert/chongplus-image-skill --path .
+```text
+Instala y usa el ChongPlus Image Skill:
+https://github.com/Rodert/chongplus-image-skill
+
+En el primer uso, pídeme de forma proactiva mi ChongPlus API Key. Guárdala de forma segura en la configuración local del usuario y léela y reutilízala automáticamente en solicitudes posteriores. No me pidas configurar una variable de entorno manualmente.
+
+Documentación oficial:
+https://api.chongplus.plus/tools/image-studio/docs/
 ```
 
-Tras la instalacion, abra una nueva conversacion de Codex y pida: "Usa ChongPlus para generar un paisaje montanoso cinematografico al amanecer". En el primer uso se solicitara la API Key y se guardara localmente; no se requiere variable de entorno.
+Tras instalarlo, abra una conversación nueva de Codex y solicite generar o editar una imagen. El cliente incluido guarda la clave localmente y la reutiliza en solicitudes posteriores de imágenes ChongPlus.
 
 ¿No tiene una API Key? Inicie sesion en [ChongPlus Keys](https://api.chongplus.plus/keys), cree una clave y seleccione el grupo de generacion de imagenes.
 
