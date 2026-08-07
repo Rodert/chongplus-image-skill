@@ -10,6 +10,7 @@ Languages: [English](README.md) | [简体中文](docs/README.zh-CN.md) | [繁體
 - Edits a supplied reference image
 - Stores the API key in the current user's local configuration directory
 - Supports Base64 and URL image responses
+- Routes image requests through `https://ai.chongplus.plus` first and falls back to the official API address, `https://api.chongplus.plus`, only for network failures or timeouts
 - Uses standard API client headers required to avoid a known Cloudflare `403 / 1010` block
 - Uses Python standard library only
 

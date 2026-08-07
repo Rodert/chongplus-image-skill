@@ -14,7 +14,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-BASE_URL = "https://api.chongplus.plus"
+BASE_URLS = ("https://ai.chongplus.plus", "https://api.chongplus.plus")
 MODEL = "gpt-image-2"
 SIZES = {"1024x1024", "2048x2048", "1536x1024", "1024x1536", "3840x2160", "2160x3840"}
 
@@ -68,6 +68,19 @@ def load_key():
     return key
 
 
+def request_failure_summary(failures):
+    statuses = {status for _, status in failures if status is not None}
+    if 401 in statuses:
+        return "ChongPlus could not authenticate the request. Check the saved API key and its access."
+    if 403 in statuses:
+        return "ChongPlus did not authorize this image request. Check API key access and quota."
+    if 429 in statuses:
+        return "ChongPlus is rate-limiting image requests. Retry after a short delay."
+    if any(status >= 500 for status in statuses) or any(kind == "network" for kind, _ in failures):
+        return "ChongPlus image service is temporarily unavailable. Please retry later."
+    return "ChongPlus could not complete the image request. Please retry later."
+
+
 def request(endpoint, body, content_type):
     headers = {
         "Authorization": f"Bearer {load_key()}",
@@ -75,24 +88,25 @@ def request(endpoint, body, content_type):
         "Accept": "application/json",
         "User-Agent": "ChongPlusImageSkill/1.0 (portable local client)",
     }
-    req = urllib.request.Request(BASE_URL + endpoint, data=body, headers=headers, method="POST")
-    try:
-        with urllib.request.urlopen(req, timeout=300) as response:
-            raw = response.read()
-            if not raw:
-                fail(f"API returned an empty response with HTTP {response.status}.")
-            try:
-                result = json.loads(raw.decode("utf-8"))
-            except json.JSONDecodeError:
-                fail(f"API returned non-JSON data with HTTP {response.status}: {raw[:1000].decode('utf-8', errors='replace')}")
-            if not isinstance(result, dict):
-                fail(f"API returned an unexpected JSON response with HTTP {response.status}.")
-            return result
-    except urllib.error.HTTPError as error:
-        details = error.read().decode("utf-8", errors="replace")[:1000]
-        fail(f"API request failed with HTTP {error.code}: {details}")
-    except urllib.error.URLError as error:
-        fail(f"Could not reach ChongPlus: {error.reason}")
+    for index, base_url in enumerate(BASE_URLS):
+        req = urllib.request.Request(base_url + endpoint, data=body, headers=headers, method="POST")
+        try:
+            with urllib.request.urlopen(req, timeout=300) as response:
+                raw = response.read()
+                if not raw:
+                    fail(request_failure_summary([("response", response.status)]))
+                try:
+                    result = json.loads(raw.decode("utf-8"))
+                except json.JSONDecodeError:
+                    fail(request_failure_summary([("response", response.status)]))
+                if not isinstance(result, dict):
+                    fail(request_failure_summary([("response", response.status)]))
+                return result
+        except urllib.error.HTTPError as error:
+            fail(request_failure_summary([("http", error.code)]))
+        except (urllib.error.URLError, TimeoutError):
+            if index == len(BASE_URLS) - 1:
+                fail(request_failure_summary([("network", None)]))
 
 
 def multipart(fields, image_path):

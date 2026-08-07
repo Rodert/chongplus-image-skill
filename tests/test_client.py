@@ -1,9 +1,13 @@
+import contextlib
+import io
 import importlib.util
 import json
 import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import MagicMock, patch
+import urllib.error
 
 
 CLIENT = Path(__file__).parents[1] / "scripts" / "chongplus_image.py"
@@ -39,3 +43,41 @@ class ClientTests(unittest.TestCase):
 
     def test_unknown_size_is_rejected(self):
         self.assertNotIn("1x2", CLIENT_MODULE.SIZES)
+
+    def test_request_prefers_ai_endpoint(self):
+        CLIENT_MODULE.save_key("sk-test-value")
+        response = MagicMock()
+        response.read.return_value = b'{"data": []}'
+        response.__enter__.return_value = response
+        with patch.object(CLIENT_MODULE.urllib.request, "urlopen", return_value=response) as urlopen:
+            self.assertEqual(CLIENT_MODULE.request("/v1/images/generations", b"{}", "application/json"), {"data": []})
+        self.assertEqual(urlopen.call_count, 1)
+        self.assertEqual(urlopen.call_args.args[0].full_url, "https://ai.chongplus.plus/v1/images/generations")
+
+    def test_request_falls_back_to_api_endpoint(self):
+        CLIENT_MODULE.save_key("sk-test-value")
+        response = MagicMock()
+        response.read.return_value = b'{"data": []}'
+        response.__enter__.return_value = response
+        with patch.object(
+            CLIENT_MODULE.urllib.request,
+            "urlopen",
+            side_effect=[urllib.error.URLError("unavailable"), response],
+        ) as urlopen:
+            self.assertEqual(CLIENT_MODULE.request("/v1/images/generations", b"{}", "application/json"), {"data": []})
+        self.assertEqual(urlopen.call_count, 2)
+        self.assertEqual(urlopen.call_args_list[1].args[0].full_url, "https://api.chongplus.plus/v1/images/generations")
+
+    def test_request_does_not_fallback_after_http_response(self):
+        CLIENT_MODULE.save_key("sk-test-value")
+        error = urllib.error.HTTPError("https://ai.chongplus.plus/v1/images/generations", 503, "unavailable", {}, None)
+        with patch.object(CLIENT_MODULE.urllib.request, "urlopen", side_effect=error) as urlopen:
+            with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+                CLIENT_MODULE.request("/v1/images/generations", b"{}", "application/json")
+        self.assertEqual(urlopen.call_count, 1)
+
+    def test_request_failure_summary_hides_upstream_details(self):
+        message = CLIENT_MODULE.request_failure_summary([("http", 502), ("network", None)])
+        self.assertEqual(message, "ChongPlus image service is temporarily unavailable. Please retry later.")
+        self.assertNotIn("chongplus.plus", message)
+        self.assertNotIn("502", message)

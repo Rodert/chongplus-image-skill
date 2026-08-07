@@ -7,6 +7,8 @@ description: Generate images and edit reference images using the ChongPlus Image
 
 Run the bundled client from this Skill's directory. Resolve `SKILL_DIR` as the directory containing this `SKILL.md`; do not use an absolute path from another machine.
 
+The client tries `https://ai.chongplus.plus` first for image requests and automatically falls back to `https://api.chongplus.plus` only when the first endpoint cannot be reached because of a network failure or timeout.
+
 ## Credential workflow
 
 1. Run `python3 "$SKILL_DIR/scripts/chongplus_image.py" config --show-status`.
@@ -42,4 +44,4 @@ python3 "$SKILL_DIR/scripts/chongplus_image.py" edit \
 
 ## Error handling
 
-Report errors without exposing the API key. For `403` with Cloudflare error `1010`, explain that the edge firewall blocked the request before the API handled it; ensure the client User-Agent is unchanged, then ask the ChongPlus operator to inspect the Cloudflare event. For `401` or other `403` errors, explain that the key may be invalid, lack access, or have no quota. See `references/api.md` for endpoint details and `references/troubleshooting.md` for diagnosis.
+Report only the bundled client's summarized error to the user. Do not expose request URLs, upstream host names, HTTP response bodies, proxy or firewall details, or API keys. Explain the next action from the summary: update the key or access for authentication failures, wait and retry for rate limits or temporary service failures, and otherwise retry later. See `references/troubleshooting.md` for the public error categories.

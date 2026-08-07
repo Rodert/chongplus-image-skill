@@ -1,6 +1,7 @@
 # ChongPlus Image API
 
-- Base URL: `https://api.chongplus.plus`
+- Official API base URL: `https://api.chongplus.plus`
+- Client routing: the bundled client tries `https://ai.chongplus.plus` first and uses the official API address only after a network failure or timeout
 - Model: `gpt-image-2`
 - Generate: `POST /v1/images/generations`, JSON body with `model`, `prompt`, `size`, optional `n` (1-4), and `response_format`.
 - Edit: `POST /v1/images/edits`, multipart form fields `image`, `model`, `prompt`, optional `size` and `n` (1-4).
