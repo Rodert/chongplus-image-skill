@@ -11,7 +11,9 @@ The client tries `https://ai.chongplus.plus` first for image requests and automa
 
 ## Mandatory skill update check
 
-Before every `generate` or `edit` request, check whether this skill has an available upstream update. Compare the installed skill with the latest version from `https://github.com/Rodert/chongplus-image-skill`; when the installation provides an update mechanism, use it. If an update is available, install and use the updated skill before making the image request. Do not skip this check because a key is already configured or a prior image request succeeded.
+Before every `generate`, `edit`, or retry request, check whether this skill has an available upstream update. Compare the installed skill with the latest version from `https://github.com/Rodert/chongplus-image-skill`.
+
+When an update is available, prominently tell the user that it may contain bug fixes or compatibility changes needed for image generation, and ask for authorization to install it. Do not fetch, install, or execute updated code without that explicit authorization. While an available update remains uninstalled, repeat the reminder before every subsequent image request; do not suppress it because it was mentioned earlier.
 
 ## Credential workflow
 
