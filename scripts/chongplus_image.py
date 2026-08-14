@@ -21,6 +21,39 @@ USER_AGENT = "ChongPlusImageSkill/1.0 (portable local client)"
 DOWNLOAD_RETRIES = 3
 
 
+class ClientError(SystemExit):
+    def __init__(self, message):
+        super().__init__(1)
+        self.message = message
+
+
+class RequestStatus:
+    def __init__(self, path, request_id, action, output_dir):
+        self.path = path
+        self.data = {
+            "request_id": request_id,
+            "action": action,
+            "output_dir": str(output_dir.resolve()),
+        }
+
+    def update(self, state, **details):
+        self.data.update(details)
+        self.data["state"] = state
+        timestamp = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        self.data.setdefault("started_at", timestamp)
+        self.data["updated_at"] = timestamp
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        temporary = self.path.parent / f".{self.path.name}.{secrets.token_hex(8)}.tmp"
+        try:
+            with open(temporary, "w", encoding="utf-8") as handle:
+                json.dump(self.data, handle, indent=2, sort_keys=True)
+                handle.write("\n")
+            os.replace(temporary, self.path)
+        finally:
+            if temporary.exists():
+                temporary.unlink()
+
+
 def config_path():
     if os.name == "nt":
         root = Path(os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming"))
@@ -31,7 +64,7 @@ def config_path():
 
 def fail(message):
     print(f"Error: {message}", file=sys.stderr)
-    raise SystemExit(1)
+    raise ClientError(message)
 
 
 def private_mode(path, mode):
@@ -131,12 +164,14 @@ def png_dimensions(raw):
     return None
 
 
-def download_image(url):
+def download_image(url, status=None):
     headers = {
         "Authorization": f"Bearer {load_key()}",
         "User-Agent": USER_AGENT,
     }
     for attempt in range(DOWNLOAD_RETRIES + 1):
+        if status:
+            status.update("downloading_result", download_attempt=attempt + 1)
         request = urllib.request.Request(url, headers=headers)
         try:
             with urllib.request.urlopen(request, timeout=300) as response:
@@ -153,12 +188,13 @@ def download_image(url):
         time.sleep(1)
 
 
-def save_results(response, output_dir):
+def save_results(response, output_dir, request_id=None, status=None):
     entries = response.get("data")
     if not isinstance(entries, list) or not entries:
         fail("API response contains no image data.")
     output_dir.mkdir(parents=True, exist_ok=True)
-    timestamp = time.strftime("%Y%m%d-%H%M%S")
+    timestamp = request_id or time.strftime("%Y%m%d-%H%M%S")
+    paths = []
     for index, item in enumerate(entries, 1):
         b64_json = item.get("b64_json")
         if isinstance(b64_json, str) and b64_json:
@@ -168,7 +204,7 @@ def save_results(response, output_dir):
                 fail("API returned invalid Base64 image data.")
             suffix = "png"
         elif isinstance(item.get("url"), str) and item["url"]:
-            raw, suffix = download_image(item["url"])
+            raw, suffix = download_image(item["url"], status)
         else:
             fail("An image result has neither usable b64_json nor url.")
         path = output_dir / f"chongplus-{timestamp}-{index}.{suffix}"
@@ -178,23 +214,42 @@ def save_results(response, output_dir):
         if dimensions:
             message += f" ({dimensions[0]}x{dimensions[1]})"
         print(message)
+        paths.append(str(path.resolve()))
+    return paths
 
 
 def run_image(args):
-    if args.size not in SIZES:
-        fail(f"Unsupported size: {args.size}. Choose one of: {', '.join(sorted(SIZES))}")
-    if not 1 <= args.n <= 4:
-        fail("n must be between 1 and 4.")
-    if args.action == "generate":
-        body = json.dumps({"model": MODEL, "prompt": args.prompt, "size": args.size, "n": args.n, "response_format": "b64_json"}).encode()
-        response = request("/v1/images/generations", body, "application/json")
-    else:
-        image = Path(args.image).expanduser().resolve()
-        if not image.is_file():
-            fail(f"Image file does not exist: {image}")
-        body, content_type = multipart({"model": MODEL, "prompt": args.prompt, "size": args.size, "n": args.n}, image)
-        response = request("/v1/images/edits", body, content_type)
-    save_results(response, Path(args.output_dir).expanduser())
+    output_dir = Path(args.output_dir).expanduser()
+    request_id = f"{time.strftime('%Y%m%d-%H%M%S')}-{secrets.token_hex(4)}"
+    status_path = Path(args.status_file).expanduser() if args.status_file else output_dir / f"chongplus-{request_id}.status.json"
+    status = RequestStatus(status_path, request_id, args.action, output_dir)
+    status.update("started")
+    try:
+        if args.size not in SIZES:
+            fail(f"Unsupported size: {args.size}. Choose one of: {', '.join(sorted(SIZES))}")
+        if not 1 <= args.n <= 4:
+            fail("n must be between 1 and 4.")
+        if args.action == "generate":
+            body = json.dumps({"model": MODEL, "prompt": args.prompt, "size": args.size, "n": args.n, "response_format": "b64_json"}).encode()
+            status.update("submitting_request")
+            response = request("/v1/images/generations", body, "application/json")
+        else:
+            image = Path(args.image).expanduser().resolve()
+            if not image.is_file():
+                fail(f"Image file does not exist: {image}")
+            body, content_type = multipart({"model": MODEL, "prompt": args.prompt, "size": args.size, "n": args.n}, image)
+            status.update("submitting_request")
+            response = request("/v1/images/edits", body, content_type)
+        status.update("response_received")
+        status.update("writing_results")
+        paths = save_results(response, output_dir, request_id, status)
+        status.update("succeeded", outputs=paths)
+    except ClientError as error:
+        status.update("failed", error=error.message)
+        raise
+    except Exception:
+        status.update("failed", error="Unexpected client error.")
+        raise
 
 
 def main():
@@ -211,6 +266,7 @@ def main():
         command.add_argument("--size", default="2048x2048")
         command.add_argument("--n", type=int, default=1)
         command.add_argument("--output-dir", default="outputs")
+        command.add_argument("--status-file")
         if action == "edit":
             command.add_argument("--image", required=True)
     args = parser.parse_args()

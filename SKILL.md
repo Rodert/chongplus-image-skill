@@ -39,6 +39,12 @@ python3 "$SKILL_DIR/scripts/chongplus_image.py" generate \
 
 Use `--n` only from 1 through 4. The client writes result files to the output directory and prints their paths. Note the actual output dimensions when they differ from the requested size.
 
+## Live request status
+
+Each `generate` or `edit` invocation writes one atomically updated JSON status file. By default it is named `chongplus-<request-id>.status.json` in the output directory; use `--status-file /absolute/path/status.json` to choose its location. It records only the request ID, action, timestamps, state, safe error summary, and completed output paths; it never records the API key, prompt, or upstream response.
+
+Use the status file rather than delayed terminal output to decide request state. Valid states include `started`, `submitting_request`, `response_received`, `downloading_result`, `writing_results`, `succeeded`, and `failed`. Do not retry unless it reports `failed`, or the user explicitly directs another request.
+
 ## Request lifecycle and quota protection
 
 Each `generate` or `edit` invocation may consume image-generation quota. Treat a started invocation as in progress until its process exits; delayed, partial, or not-yet-displayed terminal output is not a failure. Do not submit an equivalent retry while the earlier invocation may still be running.

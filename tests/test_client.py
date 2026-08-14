@@ -5,6 +5,7 @@ import json
 import os
 import tempfile
 import unittest
+import base64
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 import urllib.error
@@ -106,3 +107,41 @@ class ClientTests(unittest.TestCase):
         request = urlopen.call_args.args[0]
         self.assertEqual(request.get_header("Authorization"), "Bearer sk-test-value")
         self.assertEqual(request.get_header("User-agent"), CLIENT_MODULE.USER_AGENT)
+
+    def test_run_image_writes_success_status_file(self):
+        output_dir = Path(self.home.name) / "outputs"
+        status_path = Path(self.home.name) / "status.json"
+        args = CLIENT_MODULE.argparse.Namespace(
+            action="generate",
+            prompt="test prompt",
+            size="1024x1024",
+            n=1,
+            output_dir=str(output_dir),
+            status_file=str(status_path),
+        )
+        response = {"data": [{"b64_json": base64.b64encode(b"image-bytes").decode()}]}
+        with patch.object(CLIENT_MODULE, "request", return_value=response):
+            with contextlib.redirect_stdout(io.StringIO()):
+                CLIENT_MODULE.run_image(args)
+        status = json.loads(status_path.read_text())
+        self.assertEqual(status["state"], "succeeded")
+        self.assertEqual(status["action"], "generate")
+        self.assertEqual(len(status["outputs"]), 1)
+        self.assertNotIn("prompt", status)
+        self.assertNotIn("api_key", status)
+
+    def test_run_image_writes_failed_status_file(self):
+        status_path = Path(self.home.name) / "status.json"
+        args = CLIENT_MODULE.argparse.Namespace(
+            action="generate",
+            prompt="test prompt",
+            size="invalid",
+            n=1,
+            output_dir=str(Path(self.home.name) / "outputs"),
+            status_file=str(status_path),
+        )
+        with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+            CLIENT_MODULE.run_image(args)
+        status = json.loads(status_path.read_text())
+        self.assertEqual(status["state"], "failed")
+        self.assertIn("Unsupported size", status["error"])
