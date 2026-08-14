@@ -108,6 +108,20 @@ class ClientTests(unittest.TestCase):
         self.assertEqual(request.get_header("Authorization"), "Bearer sk-test-value")
         self.assertEqual(request.get_header("User-agent"), CLIENT_MODULE.USER_AGENT)
 
+    def test_url_download_retries_once_after_network_failure(self):
+        CLIENT_MODULE.save_key("sk-test-value")
+        response = MagicMock()
+        response.read.return_value = b"image-bytes"
+        response.headers.get_content_type.return_value = "image/png"
+        response.__enter__.return_value = response
+        with patch.object(
+            CLIENT_MODULE.urllib.request,
+            "urlopen",
+            side_effect=[urllib.error.URLError("unavailable"), response],
+        ) as urlopen, patch.object(CLIENT_MODULE.time, "sleep"):
+            self.assertEqual(CLIENT_MODULE.download_image("https://example.test/result"), (b"image-bytes", "png"))
+        self.assertEqual(urlopen.call_count, 2)
+
     def test_run_image_writes_success_status_file(self):
         output_dir = Path(self.home.name) / "outputs"
         status_path = Path(self.home.name) / "status.json"

@@ -18,7 +18,7 @@ BASE_URLS = ("https://ai.chongplus.plus", "https://api.chongplus.plus")
 MODEL = "gpt-image-2"
 SIZES = {"1024x1024", "2048x2048", "1536x1024", "1024x1536", "3840x2160", "2160x3840"}
 USER_AGENT = "ChongPlusImageSkill/1.0 (portable local client)"
-DOWNLOAD_RETRIES = 3
+DOWNLOAD_RETRIES = 1
 
 
 class ClientError(SystemExit):
