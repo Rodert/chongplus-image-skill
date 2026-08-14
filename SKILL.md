@@ -47,7 +47,7 @@ When the client has not returned an explicit error, image generation normally ta
 
 An explicit client error overrides the waiting window: handle it immediately under **Error handling**. Do not wait for 30 or 120 seconds after a summarized authentication, authorization, rate-limit, invalid-request, network, or service error.
 
-After the process exits, inspect its exit status and the output directory before deciding that it failed or needs another request. Retry only after a confirmed failure, or with the user's explicit instruction.
+After the process exits, inspect its exit status and the output directory before deciding that it failed or needs another request. Retry only after a confirmed failure, or with the user's explicit instruction. Count retries separately from the initial request and make at most three retries for one user request.
 
 If an accidental duplicate request occurs, tell the user that the earlier request had not yet returned and that both completed, so both may have consumed quota. Return every image from every completed request. When the user explicitly asks for multiple requests, make each requested invocation and return all images produced by each one.
 
@@ -62,4 +62,4 @@ python3 "$SKILL_DIR/scripts/chongplus_image.py" edit \
 
 ## Error handling
 
-Report only the bundled client's summarized error to the user. Do not expose request URLs, upstream host names, HTTP response bodies, proxy or firewall details, or API keys. Explain the next action from the summary: update the key or access for authentication failures, wait and retry for rate limits or temporary service failures, and otherwise retry later. See `references/troubleshooting.md` for the public error categories.
+Report only the bundled client's summarized error to the user. Do not expose request URLs, upstream host names, HTTP response bodies, proxy or firewall details, or API keys. Do not retry authentication, authorization, or invalid-request errors; explain the required correction. For rate limits, network failures, or temporary service failures, wait and retry only after the failure is confirmed, up to three retries beyond the initial request. After the third retry fails, report the failure without another automatic request. See `references/troubleshooting.md` for the public error categories.
