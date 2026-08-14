@@ -81,3 +81,28 @@ class ClientTests(unittest.TestCase):
         self.assertEqual(message, "ChongPlus image service is temporarily unavailable. Please retry later.")
         self.assertNotIn("chongplus.plus", message)
         self.assertNotIn("502", message)
+
+    def test_empty_base64_uses_result_url(self):
+        CLIENT_MODULE.save_key("sk-test-value")
+        response = MagicMock()
+        response.read.return_value = b"image-bytes"
+        response.headers.get_content_type.return_value = "image/png"
+        response.__enter__.return_value = response
+        output_dir = Path(self.home.name) / "outputs"
+        with patch.object(CLIENT_MODULE.urllib.request, "urlopen", return_value=response) as urlopen:
+            with contextlib.redirect_stdout(io.StringIO()):
+                CLIENT_MODULE.save_results({"data": [{"b64_json": "", "url": "https://example.test/result"}]}, output_dir)
+        self.assertEqual(urlopen.call_args.args[0].full_url, "https://example.test/result")
+        self.assertEqual(next(output_dir.iterdir()).read_bytes(), b"image-bytes")
+
+    def test_url_download_includes_authentication_headers(self):
+        CLIENT_MODULE.save_key("sk-test-value")
+        response = MagicMock()
+        response.read.return_value = b"image-bytes"
+        response.headers.get_content_type.return_value = "image/png"
+        response.__enter__.return_value = response
+        with patch.object(CLIENT_MODULE.urllib.request, "urlopen", return_value=response) as urlopen:
+            CLIENT_MODULE.download_image("https://example.test/result")
+        request = urlopen.call_args.args[0]
+        self.assertEqual(request.get_header("Authorization"), "Bearer sk-test-value")
+        self.assertEqual(request.get_header("User-agent"), CLIENT_MODULE.USER_AGENT)

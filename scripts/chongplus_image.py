@@ -17,6 +17,8 @@ from pathlib import Path
 BASE_URLS = ("https://ai.chongplus.plus", "https://api.chongplus.plus")
 MODEL = "gpt-image-2"
 SIZES = {"1024x1024", "2048x2048", "1536x1024", "1024x1536", "3840x2160", "2160x3840"}
+USER_AGENT = "ChongPlusImageSkill/1.0 (portable local client)"
+DOWNLOAD_RETRIES = 3
 
 
 def config_path():
@@ -86,7 +88,7 @@ def request(endpoint, body, content_type):
         "Authorization": f"Bearer {load_key()}",
         "Content-Type": content_type,
         "Accept": "application/json",
-        "User-Agent": "ChongPlusImageSkill/1.0 (portable local client)",
+        "User-Agent": USER_AGENT,
     }
     for index, base_url in enumerate(BASE_URLS):
         req = urllib.request.Request(base_url + endpoint, data=body, headers=headers, method="POST")
@@ -129,6 +131,28 @@ def png_dimensions(raw):
     return None
 
 
+def download_image(url):
+    headers = {
+        "Authorization": f"Bearer {load_key()}",
+        "User-Agent": USER_AGENT,
+    }
+    for attempt in range(DOWNLOAD_RETRIES + 1):
+        request = urllib.request.Request(url, headers=headers)
+        try:
+            with urllib.request.urlopen(request, timeout=300) as response:
+                raw = response.read()
+                if raw:
+                    return raw, image_extension(response.headers.get_content_type())
+        except urllib.error.HTTPError as error:
+            if 400 <= error.code < 500:
+                fail("Could not download generated image.")
+        except (urllib.error.URLError, TimeoutError):
+            pass
+        if attempt == DOWNLOAD_RETRIES:
+            fail("Could not download generated image.")
+        time.sleep(1)
+
+
 def save_results(response, output_dir):
     entries = response.get("data")
     if not isinstance(entries, list) or not entries:
@@ -136,21 +160,17 @@ def save_results(response, output_dir):
     output_dir.mkdir(parents=True, exist_ok=True)
     timestamp = time.strftime("%Y%m%d-%H%M%S")
     for index, item in enumerate(entries, 1):
-        if "b64_json" in item:
+        b64_json = item.get("b64_json")
+        if isinstance(b64_json, str) and b64_json:
             try:
-                raw = base64.b64decode(item["b64_json"], validate=True)
+                raw = base64.b64decode(b64_json, validate=True)
             except (ValueError, TypeError):
                 fail("API returned invalid Base64 image data.")
             suffix = "png"
-        elif "url" in item:
-            try:
-                with urllib.request.urlopen(item["url"], timeout=300) as result:
-                    raw = result.read()
-                    suffix = image_extension(result.headers.get_content_type())
-            except urllib.error.URLError as error:
-                fail(f"Could not download generated image: {error.reason}")
+        elif isinstance(item.get("url"), str) and item["url"]:
+            raw, suffix = download_image(item["url"])
         else:
-            fail("An image result has neither url nor b64_json.")
+            fail("An image result has neither usable b64_json nor url.")
         path = output_dir / f"chongplus-{timestamp}-{index}.{suffix}"
         path.write_bytes(raw)
         dimensions = png_dimensions(raw)
