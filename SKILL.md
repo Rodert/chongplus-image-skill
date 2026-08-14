@@ -41,6 +41,10 @@ Use `--n` only from 1 through 4. The client writes result files to the output di
 
 Each `generate` or `edit` invocation may consume image-generation quota. Treat a started invocation as in progress until its process exits; delayed, partial, or not-yet-displayed terminal output is not a failure. Do not submit an equivalent retry while the earlier invocation may still be running.
 
+When the client has not returned an explicit error, image generation normally takes 30 to 120 seconds. Treat no result before 30 seconds as normal. From 30 through 120 seconds, continue waiting and do not submit a retry. If 120 seconds pass without a result, inspect the process state and output directory before deciding whether the request failed or needs another action.
+
+An explicit client error overrides the waiting window: handle it immediately under **Error handling**. Do not wait for 30 or 120 seconds after a summarized authentication, authorization, rate-limit, invalid-request, network, or service error.
+
 After the process exits, inspect its exit status and the output directory before deciding that it failed or needs another request. Retry only after a confirmed failure, or with the user's explicit instruction.
 
 If an accidental duplicate request occurs, tell the user that the earlier request had not yet returned and that both completed, so both may have consumed quota. Return every image from every completed request. When the user explicitly asks for multiple requests, make each requested invocation and return all images produced by each one.
