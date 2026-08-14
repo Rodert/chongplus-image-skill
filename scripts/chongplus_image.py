@@ -14,11 +14,11 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-BASE_URLS = ("https://ai.chongplus.plus", "https://api.chongplus.plus")
+BASE_URL = "https://ai.chongplus.plus"
 MODEL = "gpt-image-2"
 SIZES = {"1024x1024", "2048x2048", "1536x1024", "1024x1536", "3840x2160", "2160x3840"}
 USER_AGENT = "ChongPlusImageSkill/1.0 (portable local client)"
-DOWNLOAD_RETRIES = 1
+DOWNLOAD_RETRIES = 0
 
 
 class ClientError(SystemExit):
@@ -123,25 +123,23 @@ def request(endpoint, body, content_type):
         "Accept": "application/json",
         "User-Agent": USER_AGENT,
     }
-    for index, base_url in enumerate(BASE_URLS):
-        req = urllib.request.Request(base_url + endpoint, data=body, headers=headers, method="POST")
-        try:
-            with urllib.request.urlopen(req, timeout=300) as response:
-                raw = response.read()
-                if not raw:
-                    fail(request_failure_summary([("response", response.status)]))
-                try:
-                    result = json.loads(raw.decode("utf-8"))
-                except json.JSONDecodeError:
-                    fail(request_failure_summary([("response", response.status)]))
-                if not isinstance(result, dict):
-                    fail(request_failure_summary([("response", response.status)]))
-                return result
-        except urllib.error.HTTPError as error:
-            fail(request_failure_summary([("http", error.code)]))
-        except (urllib.error.URLError, TimeoutError):
-            if index == len(BASE_URLS) - 1:
-                fail(request_failure_summary([("network", None)]))
+    req = urllib.request.Request(BASE_URL + endpoint, data=body, headers=headers, method="POST")
+    try:
+        with urllib.request.urlopen(req, timeout=300) as response:
+            raw = response.read()
+            if not raw:
+                fail(request_failure_summary([("response", response.status)]))
+            try:
+                result = json.loads(raw.decode("utf-8"))
+            except json.JSONDecodeError:
+                fail(request_failure_summary([("response", response.status)]))
+            if not isinstance(result, dict):
+                fail(request_failure_summary([("response", response.status)]))
+            return result
+    except urllib.error.HTTPError as error:
+        fail(request_failure_summary([("http", error.code)]))
+    except (urllib.error.URLError, TimeoutError):
+        fail(request_failure_summary([("network", None)]))
 
 
 def multipart(fields, image_path):

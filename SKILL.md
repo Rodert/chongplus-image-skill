@@ -7,7 +7,7 @@ description: Generate images and edit reference images using the ChongPlus Image
 
 Run the bundled client from this Skill's directory. Resolve `SKILL_DIR` as the directory containing this `SKILL.md`; do not use an absolute path from another machine.
 
-The client tries `https://ai.chongplus.plus` first for image requests and automatically falls back to `https://api.chongplus.plus` only when the first endpoint cannot be reached because of a network failure or timeout.
+The client sends image requests to `https://ai.chongplus.plus`. It never automatically resubmits an image request to another endpoint after a network failure or timeout.
 
 ## Mandatory skill update check
 
@@ -43,7 +43,7 @@ Use `--n` only from 1 through 4. The client writes result files to the output di
 
 Each `generate` or `edit` invocation writes one atomically updated JSON status file. By default it is named `chongplus-<request-id>.status.json` in the output directory; use `--status-file /absolute/path/status.json` to choose its location. It records only the request ID, action, timestamps, state, safe error summary, and completed output paths; it never records the API key, prompt, or upstream response.
 
-Use the status file rather than delayed terminal output to decide request state. Valid states include `started`, `submitting_request`, `response_received`, `downloading_result`, `writing_results`, `succeeded`, and `failed`. Do not retry unless it reports `failed`, or the user explicitly directs another request.
+Use the status file rather than delayed terminal output to decide request state. Valid states include `started`, `submitting_request`, `response_received`, `downloading_result`, `writing_results`, `succeeded`, and `failed`. Do not automatically retry after `failed`; the user must explicitly direct a new request.
 
 ## Request lifecycle and quota protection
 
@@ -53,7 +53,7 @@ When the client has not returned an explicit error, image generation normally ta
 
 An explicit client error overrides the waiting window: handle it immediately under **Error handling**. Do not wait for 30 or 120 seconds after a summarized authentication, authorization, rate-limit, invalid-request, network, or service error.
 
-After the process exits, inspect its exit status and the output directory before deciding that it failed or needs another request. Retry only after a confirmed failure, or with the user's explicit instruction. Count retries separately from the initial request and make at most one retry for one user request.
+After the process exits, inspect its exit status and the output directory before deciding that it failed or needs another request. Do not automatically retry any failed request. Start another request only when the user explicitly asks for it.
 
 If an accidental duplicate request occurs, tell the user that the earlier request had not yet returned and that both completed, so both may have consumed quota. Return every image from every completed request. When the user explicitly asks for multiple requests, make each requested invocation and return all images produced by each one.
 
@@ -68,4 +68,4 @@ python3 "$SKILL_DIR/scripts/chongplus_image.py" edit \
 
 ## Error handling
 
-Report only the bundled client's summarized error to the user. Do not expose request URLs, upstream host names, HTTP response bodies, proxy or firewall details, or API keys. Do not retry authentication, authorization, or invalid-request errors; explain the required correction. For rate limits, network failures, or temporary service failures, wait and retry only after the failure is confirmed, once beyond the initial request. After that retry fails, report the failure without another automatic request. See `references/troubleshooting.md` for the public error categories.
+Report only the bundled client's summarized error to the user. Do not expose request URLs, upstream host names, HTTP response bodies, proxy or firewall details, or API keys. Do not automatically retry any authentication, authorization, invalid-request, rate-limit, network, or service failure. Explain the required correction or that the user may explicitly request another attempt. See `references/troubleshooting.md` for the public error categories.

@@ -55,19 +55,16 @@ class ClientTests(unittest.TestCase):
         self.assertEqual(urlopen.call_count, 1)
         self.assertEqual(urlopen.call_args.args[0].full_url, "https://ai.chongplus.plus/v1/images/generations")
 
-    def test_request_falls_back_to_api_endpoint(self):
+    def test_request_does_not_retry_after_network_failure(self):
         CLIENT_MODULE.save_key("sk-test-value")
-        response = MagicMock()
-        response.read.return_value = b'{"data": []}'
-        response.__enter__.return_value = response
         with patch.object(
             CLIENT_MODULE.urllib.request,
             "urlopen",
-            side_effect=[urllib.error.URLError("unavailable"), response],
+            side_effect=urllib.error.URLError("unavailable"),
         ) as urlopen:
-            self.assertEqual(CLIENT_MODULE.request("/v1/images/generations", b"{}", "application/json"), {"data": []})
-        self.assertEqual(urlopen.call_count, 2)
-        self.assertEqual(urlopen.call_args_list[1].args[0].full_url, "https://api.chongplus.plus/v1/images/generations")
+            with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+                CLIENT_MODULE.request("/v1/images/generations", b"{}", "application/json")
+        self.assertEqual(urlopen.call_count, 1)
 
     def test_request_does_not_fallback_after_http_response(self):
         CLIENT_MODULE.save_key("sk-test-value")
@@ -108,19 +105,16 @@ class ClientTests(unittest.TestCase):
         self.assertEqual(request.get_header("Authorization"), "Bearer sk-test-value")
         self.assertEqual(request.get_header("User-agent"), CLIENT_MODULE.USER_AGENT)
 
-    def test_url_download_retries_once_after_network_failure(self):
+    def test_url_download_does_not_retry_after_network_failure(self):
         CLIENT_MODULE.save_key("sk-test-value")
-        response = MagicMock()
-        response.read.return_value = b"image-bytes"
-        response.headers.get_content_type.return_value = "image/png"
-        response.__enter__.return_value = response
         with patch.object(
             CLIENT_MODULE.urllib.request,
             "urlopen",
-            side_effect=[urllib.error.URLError("unavailable"), response],
-        ) as urlopen, patch.object(CLIENT_MODULE.time, "sleep"):
-            self.assertEqual(CLIENT_MODULE.download_image("https://example.test/result"), (b"image-bytes", "png"))
-        self.assertEqual(urlopen.call_count, 2)
+            side_effect=urllib.error.URLError("unavailable"),
+        ) as urlopen:
+            with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+                CLIENT_MODULE.download_image("https://example.test/result")
+        self.assertEqual(urlopen.call_count, 1)
 
     def test_run_image_writes_success_status_file(self):
         output_dir = Path(self.home.name) / "outputs"

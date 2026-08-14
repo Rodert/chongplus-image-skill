@@ -5,8 +5,8 @@
 | `No ChongPlus API key is saved` | No local credential is configured. | Ask for the key and save it with `config --set-key` or safe stdin. |
 | Authentication failure | The key is missing, invalid, or lacks access. | Replace the saved key or check its access and quota. |
 | Authorization failure | The request was not allowed. | Check account access and quota. |
-| Rate limit | The service temporarily limited requests. | Retry after a delay and lower parallelism. |
-| Temporary service failure | The image service or a network route is unavailable. | Retry once after a delay. |
+| Rate limit | The service temporarily limited requests. | Ask the user whether to try again later and lower parallelism. |
+| Temporary service failure | The image service or a network route is unavailable. | Report the failure; only retry when the user explicitly requests it. |
 | Returned image size differs | The gateway selected a different supported output size. | Report the actual saved dimensions; use a documented size on the next request. |
 
 `config --check` performs a no-cost local configuration check. It does not prove API access. No API endpoint documented by ChongPlus provides a free authentication-only health check; a real generation request can consume quota.
