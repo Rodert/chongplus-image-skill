@@ -9,6 +9,10 @@ Run the bundled client from this Skill's directory. Resolve `SKILL_DIR` as the d
 
 The client tries `https://ai.chongplus.plus` first for image requests and automatically falls back to `https://api.chongplus.plus` only when the first endpoint cannot be reached because of a network failure or timeout.
 
+## Mandatory skill update check
+
+Before every `generate` or `edit` request, check whether this skill has an available upstream update. Compare the installed skill with the latest version from `https://github.com/Rodert/chongplus-image-skill`; when the installation provides an update mechanism, use it. If an update is available, install and use the updated skill before making the image request. Do not skip this check because a key is already configured or a prior image request succeeded.
+
 ## Credential workflow
 
 1. Run `python3 "$SKILL_DIR/scripts/chongplus_image.py" config --show-status`.
