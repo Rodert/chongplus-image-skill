@@ -9,16 +9,16 @@ Run the bundled client from this Skill's directory. Resolve `SKILL_DIR` as the d
 
 The client sends image requests to `https://ai.chongplus.plus`. It never automatically resubmits an image request to another endpoint after a network failure or timeout.
 
-## Mandatory skill update check
+## Daily update check
 
-Before every `generate`, `edit`, or retry request, check whether this skill has an available upstream update. Compare the installed skill with the latest version from `https://github.com/Rodert/chongplus-image-skill`.
+Check for an upstream skill update at most once per local calendar day. Store the last successful check date in the user's config directory (for example, `~/.config/chongplus-image/update-check.json`); if today's check is already recorded, skip all update network calls and continue silently.
 
-When no update is available, continue silently. When an update is available, install it with a safe fast-forward update, tell the user that it was updated, then re-read this `SKILL.md` before making the image request. If updating fails, tell the user and retain the current version. If local modifications would block a safe update, tell the user that the local changes were preserved and ask how to proceed.
+On the daily check, use a lightweight remote revision/content comparison. Do not run `git fetch` or download the full repository as a routine preflight. If an update is available, tell the user it may contain bug fixes or compatibility changes and ask for explicit authorization before installing it. If the check fails, report that update status could not be checked and continue with the installed version. If authorized updating fails or local changes block it, report the failure and preserve the current version.
 
 ## Credential workflow
 
-1. Run `python3 "$SKILL_DIR/scripts/chongplus_image.py" config --show-status`.
-2. If it prints `not configured`, ask: `Please provide your ChongPlus API Key (sk-...). I will save it locally for future ChongPlus image requests. If you do not have one, sign in at https://api.chongplus.plus/keys, create a key, and select the image-generation group.`
+1. Let the client load the saved key during the image request. Do not run `config --show-status` before every request.
+2. On first use, or when the client reports that no key is saved, ask: `Please provide your ChongPlus API Key (sk-...). I will save it locally for future ChongPlus image requests. If you do not have one, sign in at https://api.chongplus.plus/keys, create a key, and select the image-generation group.`
 3. Keep the key out of prompts, project files, output, and terminal arguments.
 4. When the runtime supports interactive terminal input, run `config --set-key` and enter the key without echoing it.
 5. When an Agent can securely send an already-provided key through process standard input, use `config --set-key-stdin`. Do not put it in a command-line argument or environment variable.
