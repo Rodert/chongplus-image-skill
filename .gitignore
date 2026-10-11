@@ -144,3 +144,9 @@ vite.config.ts.timestamp-*
 
 # Real API verification outputs
 real*-test-output*/
+
+# Python caches and test artifacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
