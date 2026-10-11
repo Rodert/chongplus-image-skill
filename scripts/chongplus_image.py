@@ -15,7 +15,9 @@ import urllib.request
 from pathlib import Path
 
 BASE_URL = "https://ai.chongplus.plus"
-MODEL = "gpt-image-2"
+DEFAULT_MODEL = "gpt-image-2.5-flare"
+REFINEMENT_MODEL = "gpt-image-2.5-sunburst"
+MODEL_CHOICES = (DEFAULT_MODEL, REFINEMENT_MODEL)
 SIZES = {"1024x1024", "2048x2048", "1536x1024", "1024x1536", "3840x2160", "2160x3840"}
 USER_AGENT = "ChongPlusImageSkill/1.0 (portable local client)"
 DOWNLOAD_RETRIES = 0
@@ -218,6 +220,7 @@ def save_results(response, output_dir, request_id=None, status=None):
 
 def run_image(args):
     output_dir = Path(args.output_dir).expanduser()
+    model = getattr(args, "model", DEFAULT_MODEL)
     request_id = f"{time.strftime('%Y%m%d-%H%M%S')}-{secrets.token_hex(4)}"
     status_path = Path(args.status_file).expanduser() if args.status_file else output_dir / f"chongplus-{request_id}.status.json"
     status = RequestStatus(status_path, request_id, args.action, output_dir)
@@ -228,14 +231,14 @@ def run_image(args):
         if not 1 <= args.n <= 4:
             fail("n must be between 1 and 4.")
         if args.action == "generate":
-            body = json.dumps({"model": MODEL, "prompt": args.prompt, "size": args.size, "n": args.n, "response_format": "b64_json"}).encode()
+            body = json.dumps({"model": model, "prompt": args.prompt, "size": args.size, "n": args.n, "response_format": "b64_json"}).encode()
             status.update("submitting_request")
             response = request("/v1/images/generations", body, "application/json")
         else:
             image = Path(args.image).expanduser().resolve()
             if not image.is_file():
                 fail(f"Image file does not exist: {image}")
-            body, content_type = multipart({"model": MODEL, "prompt": args.prompt, "size": args.size, "n": args.n}, image)
+            body, content_type = multipart({"model": model, "prompt": args.prompt, "size": args.size, "n": args.n}, image)
             status.update("submitting_request")
             response = request("/v1/images/edits", body, content_type)
         status.update("response_received")
@@ -263,6 +266,7 @@ def main():
         command.add_argument("--prompt", required=True)
         command.add_argument("--size", default="2048x2048")
         command.add_argument("--n", type=int, default=1)
+        command.add_argument("--model", choices=MODEL_CHOICES, default=DEFAULT_MODEL)
         command.add_argument("--output-dir", default="outputs")
         command.add_argument("--status-file")
         if action == "edit":

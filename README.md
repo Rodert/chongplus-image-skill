@@ -6,7 +6,8 @@ Languages: [English](README.md) | [简体中文](docs/README.zh-CN.md) | [繁體
 
 ## What it does
 
-- Generates images with `gpt-image-2`
+- Generates images with `gpt-image-2.5-flare` by default
+- Supports `gpt-image-2.5-sunburst` for user-requested精细化处理
 - Edits a supplied reference image
 - Stores the API key in the current user's local configuration directory
 - Supports Base64 and URL image responses
@@ -19,7 +20,7 @@ Languages: [English](README.md) | [简体中文](docs/README.zh-CN.md) | [繁體
 - An Agent Skills-compatible client, such as Codex
 - Python 3.9 or newer
 - Permission for the client to execute local Python and write user configuration files
-- A ChongPlus API Key with access to `gpt-image-2`
+- A ChongPlus API Key with access to the selected image model
 
 This repository cannot make arbitrary chat clients execute local code or securely store credentials. In those clients, use the API directly instead.
 
