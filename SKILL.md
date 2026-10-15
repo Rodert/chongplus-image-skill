@@ -39,7 +39,11 @@ python3 "$SKILL_DIR/scripts/chongplus_image.py" generate \
   --size 1536x1024 --output-dir ./outputs
 ```
 
-For user-requested精细化处理, add `--model gpt-image-2.5-sunburst`.
+Use `gpt-image-2.5-flare` by default for ordinary generation and editing. Use `gpt-image-2.5-sunburst` for精细化处理 when the user explicitly asks for refinement, detail enhancement, or further polishing. Also use `gpt-image-2.5-sunburst` when the user's intent clearly requires a high-detail final deliverable, including 2K or 4K output, 3840x2160 or 2160x3840 output, commercial artwork, or print-ready artwork. Do not invoke the refinement model for ordinary requests that do not express one of these intents.
+
+After successfully returning an image, briefly tell the user which model was used. When `gpt-image-2.5-flare` was used, mention that `gpt-image-2.5-sunburst` is available for精细化处理. When `gpt-image-2.5-sunburst` was selected because of a high-resolution or final-deliverable requirement, do not start a second refinement request automatically.
+
+For精细化处理 or a high-detail final deliverable such as 2K/4K, commercial, or print-ready output, add `--model gpt-image-2.5-sunburst`.
 
 Use `--n` only from 1 through 4. The client writes result files to the output directory and prints their paths. Note the actual output dimensions when they differ from the requested size.
 
