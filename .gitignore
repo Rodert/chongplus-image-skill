@@ -1,4 +1,19 @@
 # Logs
+# Operating system metadata
+.DS_Store
+._*
+Thumbs.db
+Desktop.ini
+
+# Local image generation outputs
+/outputs/
+chongplus-*.status.json
+
+# Local Python virtual environments
+.venv/
+venv/
+
+# Logs
 logs
 *.log
 npm-debug.log*
