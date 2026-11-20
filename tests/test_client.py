@@ -55,6 +55,21 @@ class ClientTests(unittest.TestCase):
         self.assertEqual(urlopen.call_count, 1)
         self.assertEqual(urlopen.call_args.args[0].full_url, "https://ai.chongplus.plus/v1/images/generations")
 
+    def test_model_check_is_best_effort(self):
+        CLIENT_MODULE.save_key("sk-test-value")
+        with patch.object(CLIENT_MODULE.urllib.request, "urlopen", side_effect=urllib.error.URLError("unavailable")):
+            CLIENT_MODULE.check_models(CLIENT_MODULE.DEFAULT_MODEL)
+        self.assertTrue(CLIENT_MODULE.model_check_path().exists())
+
+    def test_model_check_is_cached_for_the_day(self):
+        CLIENT_MODULE.save_key("sk-test-value")
+        path = CLIENT_MODULE.model_check_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps({"date": CLIENT_MODULE.time.strftime("%Y-%m-%d"), "models": []}))
+        with patch.object(CLIENT_MODULE.urllib.request, "urlopen") as urlopen:
+            CLIENT_MODULE.check_models(CLIENT_MODULE.DEFAULT_MODEL)
+        urlopen.assert_not_called()
+
     def test_request_does_not_retry_after_network_failure(self):
         CLIENT_MODULE.save_key("sk-test-value")
         with patch.object(

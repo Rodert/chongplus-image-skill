@@ -21,6 +21,7 @@ MODEL_CHOICES = (DEFAULT_MODEL, REFINEMENT_MODEL)
 SIZES = {"1024x1024", "2048x2048", "1536x1024", "1024x1536", "3840x2160", "2160x3840"}
 USER_AGENT = "ChongPlusImageSkill/1.0 (portable local client)"
 DOWNLOAD_RETRIES = 0
+MODEL_CHECK_TIMEOUT = 3
 
 
 class ClientError(SystemExit):
@@ -62,6 +63,38 @@ def config_path():
     else:
         root = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
     return root / "chongplus-image" / "config.json"
+
+
+def model_check_path():
+    return config_path().with_name("model-check.json")
+
+
+def check_models(model):
+    """Best-effort daily model check; never blocks image generation on failure."""
+    path = model_check_path()
+    today = time.strftime("%Y-%m-%d")
+    try:
+        if path.is_file() and json.loads(path.read_text(encoding="utf-8")).get("date") == today:
+            return
+        key = json.loads(config_path().read_text(encoding="utf-8")).get("api_key")
+        if not isinstance(key, str) or not key.strip():
+            return
+        path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        path.write_text(json.dumps({"date": today, "models": []}), encoding="utf-8")
+        req = urllib.request.Request(
+            BASE_URL + "/v1/models",
+            headers={"Authorization": f"Bearer {key}", "Accept": "application/json", "User-Agent": USER_AGENT},
+        )
+        with urllib.request.urlopen(req, timeout=MODEL_CHECK_TIMEOUT) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+        entries = payload.get("data", []) if isinstance(payload, dict) else []
+        names = {entry.get("id") for entry in entries if isinstance(entry, dict)}
+        path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        path.write_text(json.dumps({"date": today, "models": sorted(name for name in names if name)}, indent=2) + "\n", encoding="utf-8")
+        if names and model not in names:
+            print(f"Warning: model {model} was not listed by the service; continuing with the requested model.", file=sys.stderr)
+    except Exception:
+        return
 
 
 def fail(message):
@@ -226,6 +259,7 @@ def run_image(args):
     status = RequestStatus(status_path, request_id, args.action, output_dir)
     status.update("started")
     try:
+        check_models(model)
         if args.size not in SIZES:
             fail(f"Unsupported size: {args.size}. Choose one of: {', '.join(sorted(SIZES))}")
         if not 1 <= args.n <= 4:
